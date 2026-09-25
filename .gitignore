@@ -1,0 +1,13 @@
+.claude/
+__pycache__/ 
+*.pyc
+
+node_modules/
+.next/
+.env
+PROJECT_OVERVIEW.md
+SCHEMA_AND_MODELS_REFERENCE.md
+RUN_SETUP_GUIDE.md
+TECH_STACK_REFERENCE.md
+API_FLOW_REFERENCE.md
+**/.env
