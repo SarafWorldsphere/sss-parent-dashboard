@@ -18,22 +18,24 @@ type NoticeData = {
   is_read?: boolean;
 };
 
-// ── localStorage helpers ──────────────────────────────────────────────────────
-
 function getReadNoticeIds(studentId: number): Set<number> {
+  if (typeof window === 'undefined') return new Set<number>();
   try {
     const raw = localStorage.getItem(`sss_read_notices_${studentId}`);
-    return raw ? new Set(JSON.parse(raw)) : new Set();
-  } catch { return new Set(); }
+    return raw ? new Set<number>(JSON.parse(raw)) : new Set<number>();
+  } catch {
+    return new Set<number>();
+  }
 }
 
 function saveReadNoticeIds(studentId: number, ids: Set<number>) {
+  if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(`sss_read_notices_${studentId}`, JSON.stringify([...ids]));
-  } catch { /* ignore */ }
+  } catch {
+    // Ignore localStorage errors.
+  }
 }
-
-// ── Notice Detail Modal ───────────────────────────────────────────────────────
 
 function NoticeModal({
   notice,
@@ -48,38 +50,63 @@ function NoticeModal({
   onClose: () => void;
   onTalkToTeacher: () => void;
 }) {
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [onClose]);
+
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
-      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-2 backdrop-blur-sm sm:p-4"
+      onClick={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div className="bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] border border-white/10">
-        <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 shrink-0">
-          <div className="flex items-center gap-3 min-w-0">
-            <span className="text-xl shrink-0" style={{ color: '#F97316' }}>📢</span>
-            <div className="min-w-0">
-              <h3 className="font-bold text-white break-words">{displayTitle}</h3>
-              <p className="text-xs text-slate-400 mt-0.5">
-                Posted by {notice.posted_by_name} · {notice.notice_date}
+      <div className="flex max-h-[92dvh] w-full min-w-0 max-w-lg flex-col overflow-hidden rounded-2xl border border-white/10 bg-slate-800 shadow-2xl">
+        <div className="flex shrink-0 items-start justify-between gap-3 border-b border-white/10 px-4 py-4 sm:px-6">
+          <div className="flex min-w-0 flex-1 items-start gap-3">
+            <span className="shrink-0 text-xl" style={{ color: '#F97316' }}>📢</span>
+            <div className="min-w-0 flex-1">
+              <h3 className="break-words font-bold text-white [overflow-wrap:anywhere]">{displayTitle}</h3>
+              <p className="mt-1 break-words text-xs text-slate-400 [overflow-wrap:anywhere]">
+                Posted by {notice.posted_by_name || 'School'} · {notice.notice_date}
               </p>
             </div>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white text-xl font-bold leading-none shrink-0 ml-3">×</button>
-        </div>
-        <div className="p-6 overflow-y-auto flex-1">
-          <p className="text-sm font-medium text-slate-300 leading-relaxed whitespace-pre-line">{displayText}</p>
-        </div>
-        <div className="px-6 pb-6 pt-2 shrink-0 flex gap-3">
           <button
+            type="button"
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border font-semibold text-sm text-slate-300 hover:bg-white/10 transition-colors"
+            aria-label="Close notice details"
+            className="shrink-0 rounded-lg p-1 text-2xl font-bold leading-none text-slate-400 hover:text-white"
+          >
+            ×
+          </button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 sm:p-6">
+          <p className="whitespace-pre-line break-words text-sm font-medium leading-relaxed text-slate-300 [overflow-wrap:anywhere]">
+            {displayText}
+          </p>
+        </div>
+        <div className="flex shrink-0 flex-col gap-3 border-t border-white/10 px-4 pb-4 pt-3 sm:flex-row sm:px-6 sm:pb-6">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-full rounded-xl border py-3 text-sm font-semibold text-slate-300 transition-colors hover:bg-white/10 sm:flex-1"
             style={{ borderColor: 'rgba(255,255,255,0.15)' }}
           >
             Close
           </button>
           <button
+            type="button"
             onClick={onTalkToTeacher}
-            className="flex-1 py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-colors"
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition-colors sm:flex-1"
             style={{ color: '#EA580C', background: '#FFF7ED', border: '1px solid #FED7AA' }}
           >
             💬 Talk to Teacher
@@ -90,213 +117,261 @@ function NoticeModal({
   );
 }
 
-// ── Main Page ─────────────────────────────────────────────────────────────────
-
 export default function NoticesHistory() {
   const router = useRouter();
-  const { studentId, setStudentId, parentId, language, setLanguage } = useDashboard();
-  const [notices,     setNotices]     = useState<NoticeData[]>([]);
-  const [isLoading,   setIsLoading]   = useState(true);
-  const [readIds,     setReadIds]     = useState<Set<number>>(new Set());
-  const [modalNotice, setModalNotice] = useState<{ notice: NoticeData; displayTitle: string; displayText: string } | null>(null);
+  const {
+    studentId,
+    setStudentId,
+    parentId,
+    parentName,
+    language,
+    setLanguage,
+  } = useDashboard();
+
+  const [notices, setNotices] = useState<NoticeData[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [readIds, setReadIds] = useState<Set<number>>(new Set<number>());
+  const [modalNotice, setModalNotice] = useState<{
+    notice: NoticeData;
+    displayTitle: string;
+    displayText: string;
+  } | null>(null);
 
   const { speaking, speak, fallbackLang } = useTTS();
 
   useEffect(() => {
-    if (!studentId) return;
+    if (!studentId) {
+      setReadIds(new Set<number>());
+      setNotices([]);
+      setModalNotice(null);
+      setIsLoading(false);
+      return;
+    }
     setReadIds(getReadNoticeIds(studentId));
   }, [studentId]);
 
   useEffect(() => {
-    if (!studentId) return;
+    if (!studentId) {
+      setNotices([]);
+      setIsLoading(false);
+      return;
+    }
+
+    let cancelled = false;
     const loadData = async () => {
       setIsLoading(true);
       try {
         const result = await fetchNoticesHistory(studentId);
-        setNotices(result || []);
-        // Do NOT auto-mark all as read here — that was the bug.
-        // Read state is loaded from localStorage in the effect above.
-      } catch (err) {
-        console.error('[SSS] Notices: failed to load', err);
+        if (cancelled) return;
+        setNotices(Array.isArray(result) ? result : []);
+      } catch (error) {
+        if (cancelled) return;
+        console.error('[SSS] Notices: failed to load', error);
+        setNotices([]);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
+
     loadData();
+    return () => {
+      cancelled = true;
+    };
   }, [studentId]);
 
   const filtered = notices;
-
-  const idKey = useMemo(() => filtered.map(n => n.notice_id).join(','), [filtered]);
-  const titleTexts = useMemo(() => filtered.map(n => n.notice_title), [idKey]); // eslint-disable-line react-hooks/exhaustive-deps
-  const bodyTexts  = useMemo(() => filtered.map(n => n.notice_text),  [idKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const idKey = useMemo(() => filtered.map((notice) => notice.notice_id).join(','), [filtered]);
+  const titleTexts = useMemo(
+    () => filtered.map((notice) => notice.notice_title || ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [idKey]
+  );
+  const bodyTexts = useMemo(
+    () => filtered.map((notice) => notice.notice_text || ''),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [idKey]
+  );
 
   const { displayed: displayedTitles, translating: translatingTitles } = useTranslation(titleTexts, language);
-  const { displayed: displayedTexts,  translating: translatingBody   } = useTranslation(bodyTexts,  language);
-
+  const { displayed: displayedTexts, translating: translatingBody } = useTranslation(bodyTexts, language);
   const translating = translatingTitles || translatingBody;
 
-  // Auto-open a specific notice when navigated from the bell (?open=<notice_id>).
-  // Reads window.location.search directly to avoid useSearchParams + Suspense requirement.
-  // Runs once notices are loaded. Uses the same read logic as card clicks.
   useEffect(() => {
     if (typeof window === 'undefined' || notices.length === 0) return;
     const params = new URLSearchParams(window.location.search);
     const openId = params.get('open');
     if (!openId) return;
-    const targetId = parseInt(openId);
-    if (isNaN(targetId)) return;
-    const idx = notices.findIndex(n => n.notice_id === targetId);
-    if (idx === -1) return;
-    const notice = notices[idx];
-    const displayTitle = displayedTitles[idx] ?? notice.notice_title;
-    const displayText  = displayedTexts[idx]  ?? notice.notice_text;
+
+    const targetId = Number.parseInt(openId, 10);
+    if (Number.isNaN(targetId)) return;
+    const index = notices.findIndex((notice) => notice.notice_id === targetId);
+    if (index === -1) return;
+
+    const notice = notices[index];
+    const displayTitle = displayedTitles[index] ?? notice.notice_title ?? '';
+    const displayText = displayedTexts[index] ?? notice.notice_text ?? '';
     setModalNotice({ notice, displayTitle, displayText });
-    // Inline mark-as-read (same logic as markNoticeRead) so the bell updates too
-    setReadIds(prev => {
-      if (prev.has(targetId)) return prev;
-      const next = new Set(prev);
+
+    setReadIds((previous) => {
+      if (previous.has(targetId)) return previous;
+      const next = new Set(previous);
       next.add(targetId);
       saveReadNoticeIds(studentId, next);
-      window.dispatchEvent(new CustomEvent('sssNoticeRead', { detail: { noticeId: targetId, sid: studentId } }));
+      window.dispatchEvent(new CustomEvent('sssNoticeRead', {
+        detail: { noticeId: targetId, sid: studentId },
+      }));
       return next;
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notices, displayedTitles, displayedTexts]);
 
-  // Mark a single notice as read — updates local state, persists to localStorage,
-  // and fires a custom event so TopBar bell updates immediately in the same tab.
   const markNoticeRead = (noticeId: number) => {
-    if (readIds.has(noticeId)) return; // already read, skip
+    if (readIds.has(noticeId)) return;
     const next = new Set(readIds);
     next.add(noticeId);
     setReadIds(next);
     saveReadNoticeIds(studentId, next);
-    window.dispatchEvent(new CustomEvent('sssNoticeRead', { detail: { noticeId, sid: studentId } }));
+    window.dispatchEvent(new CustomEvent('sssNoticeRead', {
+      detail: { noticeId, sid: studentId },
+    }));
+  };
+
+  const openNotice = (notice: NoticeData, index: number) => {
+    markNoticeRead(notice.notice_id);
+    setModalNotice({
+      notice,
+      displayTitle: displayedTitles[index] ?? notice.notice_title ?? '',
+      displayText: displayedTexts[index] ?? notice.notice_text ?? '',
+    });
   };
 
   const handleTalkToTeacher = (notice: NoticeData) => {
     setModalNotice(null);
-    const s = encodeURIComponent(`Re: Notice - ${notice.notice_title}`);
-    router.push(`/parent/communication?new=1&subject=${s}&category=Academic`);
+    const subject = encodeURIComponent(`Re: Notice - ${notice.notice_title}`);
+    router.push(`/parent/communication?new=1&subject=${subject}&category=Academic`);
   };
 
   return (
-    <div className="min-h-full flex flex-col font-sans text-slate-200">
+    <div className="flex min-h-full min-w-0 flex-col overflow-x-hidden font-sans text-slate-200">
       <TopBar
         studentId={studentId}
         setStudentId={setStudentId}
         parentId={parentId}
+        parentName={parentName}
         language={language}
         setLanguage={setLanguage}
         isLoading={isLoading}
       />
 
-      <div className="flex-1 p-4 md:p-8">
-        <div className="max-w-5xl mx-auto">
-
-          {/* Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-            <div>
-              <div className="flex items-center gap-3">
-                <span className="text-3xl" style={{ color: '#F97316' }}>📢</span>
-                <h1 className="text-2xl font-black text-white tracking-tight">Notices History</h1>
+      <main className="min-w-0 flex-1 p-3 sm:p-4 md:p-8">
+        <div className="mx-auto min-w-0 max-w-5xl">
+          <header className="mb-6 flex min-w-0 flex-col justify-between gap-4 sm:mb-8 sm:flex-row sm:items-center">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-3">
+                <span className="shrink-0 text-2xl sm:text-3xl" style={{ color: '#F97316' }}>📢</span>
+                <h1 className="break-words text-xl font-black tracking-tight text-white sm:text-2xl">Notices History</h1>
               </div>
-              <p className="text-slate-400 font-medium mt-1 ml-11">All important notices and announcements.</p>
+              <p className="ml-0 mt-2 text-sm font-medium text-slate-400 sm:ml-11 sm:mt-1">
+                All important notices and announcements.
+              </p>
             </div>
-
             {translating && (
-              <span className="text-[11px] text-orange-500 font-semibold flex items-center gap-1">
-                <span className="w-3 h-3 rounded-full border-2 border-orange-400 border-t-transparent animate-spin inline-block" />
+              <span className="flex shrink-0 items-center gap-2 text-[11px] font-semibold text-orange-400">
+                <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
                 Translating…
               </span>
             )}
-          </div>
+          </header>
 
-          {isLoading ? (
-            <div className="flex justify-center h-64 items-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-orange-500" />
+          {!studentId ? (
+            <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 px-4 py-16 text-center sm:py-20">
+              <p className="mb-3 text-4xl">👨‍🎓</p>
+              <p className="text-lg font-bold text-white">No child selected</p>
+              <p className="mt-2 text-sm text-slate-400">Select a child to view notices.</p>
+            </div>
+          ) : isLoading ? (
+            <div className="flex min-h-64 flex-col items-center justify-center gap-3">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-orange-500 border-t-transparent" />
+              <p className="text-sm text-slate-400">Loading notices…</p>
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-20 text-center bg-white/5 rounded-3xl border border-white/10 border-dashed">
-              <p className="text-4xl mb-3">📭</p>
-              <p className="text-white font-bold text-lg">No notices found.</p>
-              <p className="text-slate-400 text-sm mt-1">There are no announcements for this class right now.</p>
+            <div className="rounded-3xl border border-dashed border-white/10 bg-white/5 px-4 py-16 text-center sm:py-20">
+              <p className="mb-3 text-4xl">📭</p>
+              <p className="text-lg font-bold text-white">No notices found.</p>
+              <p className="mt-2 text-sm text-slate-400">There are no announcements for this class right now.</p>
             </div>
           ) : (
-            <div className={`space-y-4 md:space-y-6 pb-10 transition-opacity duration-200 ${translating ? 'opacity-60' : 'opacity-100'}`}>
+            <div className={`min-w-0 space-y-4 pb-10 transition-opacity duration-200 sm:space-y-6 ${translating ? 'opacity-60' : 'opacity-100'}`}>
               {filtered.map((notice, index) => {
-                const isUnread     = !readIds.has(notice.notice_id);
-                const displayTitle = displayedTitles[index] ?? notice.notice_title;
-                const displayText  = displayedTexts[index]  ?? notice.notice_text;
-                const ttsKey       = `notice_${notice.notice_id ?? index}`;
-                const isFallback   = !!fallbackLang && speaking === ttsKey;
+                const isUnread = !readIds.has(notice.notice_id);
+                const displayTitle = displayedTitles[index] ?? notice.notice_title ?? '';
+                const displayText = displayedTexts[index] ?? notice.notice_text ?? '';
+                const ttsKey = `notice_${notice.notice_id ?? index}`;
+                const isFallback = !!fallbackLang && speaking === ttsKey;
 
                 return (
-                  <div
+                  <article
                     key={notice.notice_id || index}
-                    onClick={() => {
-                      markNoticeRead(notice.notice_id);
-                      setModalNotice({ notice, displayTitle, displayText });
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Open notice: ${displayTitle}`}
+                    onClick={() => openNotice(notice, index)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        openNotice(notice, index);
+                      }
                     }}
-                    className={`bg-white/5 rounded-2xl border hover:bg-white/10 transition-all p-5 md:p-6 flex flex-col md:flex-row gap-5 items-start relative group cursor-pointer ${isUnread ? 'border-orange-500/40' : 'border-white/10'}`}
+                    className={`relative flex min-w-0 cursor-pointer flex-col gap-3 rounded-2xl border bg-white/5 p-3 transition-all hover:bg-white/10 sm:gap-5 sm:p-5 md:flex-row md:items-start md:p-6 ${isUnread ? 'border-orange-500/40' : 'border-white/10'}`}
                   >
-                    {/* Left Icon */}
-                    <div className="shrink-0 w-16 h-16 rounded-full bg-orange-50 border-[6px] border-[#FFF7ED] flex items-center justify-center text-orange-500 text-2xl hidden md:flex">
-                      📢
-                    </div>
+                    <div className="hidden h-16 w-16 shrink-0 items-center justify-center rounded-full border-[6px] border-[#FFF7ED] bg-orange-50 text-2xl text-orange-500 md:flex">📢</div>
 
-                    {/* Main Content */}
-                    <div className="flex-1 min-w-0 pr-0 md:pr-40">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="shrink-0 w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-500 text-lg md:hidden">
-                          📢
-                        </div>
-                        <h3 className="font-black text-white text-lg leading-tight break-words whitespace-normal">{displayTitle}</h3>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-orange-50 text-lg text-orange-500 sm:h-10 sm:w-10 md:hidden">📢</div>
+                        <h3 className="min-w-0 flex-1 break-words whitespace-normal pt-1 text-base font-black leading-snug text-white [overflow-wrap:anywhere] sm:text-lg">
+                          {displayTitle}
+                        </h3>
                       </div>
-
-                      <p className="text-sm font-medium text-slate-300 leading-relaxed whitespace-pre-line mt-1 md:mt-2 line-clamp-3">
+                      <p className="mt-3 line-clamp-3 whitespace-pre-line break-words text-sm font-medium leading-relaxed text-slate-300 [overflow-wrap:anywhere] sm:mt-2">
                         {displayText}
                       </p>
-
-                      <p className="text-xs font-bold text-slate-400 mt-4">
-                        Posted by: <span className="text-slate-300">{notice.posted_by_name}</span>
+                      <p className="mt-3 break-words text-xs font-bold text-slate-400 sm:mt-4">
+                        Posted by: <span className="text-slate-300">{notice.posted_by_name || 'School'}</span>
                       </p>
                     </div>
 
-                    {/* Right Badges */}
-                    <div className="absolute top-5 right-5 md:static flex flex-row md:flex-col items-center md:items-end gap-3 shrink-0" onClick={e => e.stopPropagation()}>
-                      {isUnread && (
-                        <div className="bg-[#EA580C] text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
-                          New
-                        </div>
-                      )}
-
-                      <SpeakBtn
-                        textKey={ttsKey}
-                        speaking={speaking}
-                        fallback={isFallback}
-                        onSpeak={() => speak(`${displayTitle}. ${displayText}`, language, ttsKey)}
-                      />
-
-                      <div className="flex items-center gap-2 bg-[#FFF7ED] text-[#EA580C] border border-[#FED7AA] px-3 py-1.5 rounded-lg">
-                        <span className="text-sm">🗓️</span>
-                        <span className="text-xs font-black tracking-wide">{notice.notice_date}</span>
+                    <div
+                      className="flex w-full flex-wrap items-center justify-between gap-2 border-t border-white/10 pt-3 sm:gap-3 md:w-auto md:min-w-[145px] md:flex-col md:items-end md:border-0 md:pt-0"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        {isUnread && (
+                          <span className="rounded-full bg-[#EA580C] px-3 py-1 text-[10px] font-black uppercase tracking-wider text-white shadow-sm">New</span>
+                        )}
+                        <SpeakBtn
+                          textKey={ttsKey}
+                          speaking={speaking}
+                          fallback={isFallback}
+                          onSpeak={() => speak(`${displayTitle}. ${displayText}`, language, ttsKey)}
+                        />
+                      </div>
+                      <div className="flex max-w-full items-center gap-2 rounded-lg border border-[#FED7AA] bg-[#FFF7ED] px-2.5 py-1.5 text-[#EA580C] sm:px-3">
+                        <span className="shrink-0 text-sm">🗓️</span>
+                        <span className="break-words text-[11px] font-black tracking-wide sm:text-xs">{notice.notice_date}</span>
                       </div>
                     </div>
-                  </div>
+                  </article>
                 );
               })}
-
-              <div className="flex items-center justify-center gap-1.5 mt-8 text-xs font-bold text-slate-500">
+              <div className="mt-8 flex items-center justify-center gap-1.5 text-center text-xs font-bold text-slate-500">
                 <span>ⓘ</span> Showing latest notices on top
               </div>
             </div>
           )}
         </div>
-      </div>
+      </main>
 
-      {/* Notice detail modal */}
       {modalNotice && (
         <NoticeModal
           notice={modalNotice.notice}

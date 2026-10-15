@@ -418,11 +418,15 @@ export const closeConversation = async (
 };
 
 export const fetchConversationRecipients = async (
-  studentId: number
+  parentId: number
 ) => {
   try {
+    if (!parentId) {
+      return [];
+    }
+
     const response = await api.get(
-      `/comm/teachers/${studentId}`
+      `/comm/teachers/${parentId}`
     );
 
     return response.data;
@@ -435,7 +439,6 @@ export const fetchConversationRecipients = async (
     return [];
   }
 };
-
 export const fetchConversations = async (
   studentId: number,
   parentId: number

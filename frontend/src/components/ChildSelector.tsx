@@ -88,31 +88,44 @@ export default function ChildSelector({
   const activeChild = children.find(c => c.student_id === currentStudentId);
 
   return (
-    <div className="flex flex-col">
-      <label className="text-xs font-semibold text-gray-500 mb-1 ml-1">Select Child</label>
-      <div className="flex items-center bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">
-        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold mr-2">
+    <div className="flex flex-col w-full min-w-0">
+      <label className="text-xs font-semibold text-gray-500 mb-1 ml-1">
+        Select Child
+      </label>
+
+      <div className="flex items-center w-full min-w-0 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">
+        <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 font-bold mr-2 shrink-0">
           {activeChild?.full_name?.charAt(0) || 'S'}
         </div>
-        <select
-          value={currentStudentId}
-          onChange={e => onSelect(Number(e.target.value))}
-          disabled={disabled || loading}
-          className="bg-transparent focus:outline-none disabled:opacity-50 text-gray-800 text-sm font-semibold appearance-none pr-6 cursor-pointer"
-          style={{
-            backgroundImage:
-              'url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3e%3cpolyline points=\'6 9 12 15 18 9\'%3e%3c/polyline%3e%3c/svg%3e")',
-            backgroundRepeat: 'no-repeat',
-            backgroundPosition: 'right center',
-            backgroundSize: '1em',
-          }}
-        >
-          {children.map(child => (
-            <option key={child.student_id} value={child.student_id}>
-              {child.full_name} • {child.class_name} {child.section}
-            </option>
-          ))}
-        </select>
+
+        <div className="relative flex-1 min-w-0">
+          {/* Visible student name */}
+          <div className="flex items-center min-w-0 pr-6 text-gray-800 text-sm font-semibold">
+            <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+              {activeChild?.full_name} • {activeChild?.class_name}{' '}
+              {activeChild?.section}
+            </span>
+          </div>
+
+          {/* Native select for choosing child */}
+          <select
+            value={currentStudentId}
+            onChange={e => onSelect(Number(e.target.value))}
+            disabled={disabled || loading}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+          >
+            {children.map(child => (
+              <option key={child.student_id} value={child.student_id}>
+                {child.full_name} • {child.class_name} {child.section}
+              </option>
+            ))}
+          </select>
+
+          {/* Dropdown arrow */}
+          <span className="absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none text-gray-700">
+            ▼
+          </span>
+        </div>
       </div>
     </div>
   );

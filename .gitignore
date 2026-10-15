@@ -11,3 +11,4 @@ RUN_SETUP_GUIDE.md
 TECH_STACK_REFERENCE.md
 API_FLOW_REFERENCE.md
 **/.env
+.env.local

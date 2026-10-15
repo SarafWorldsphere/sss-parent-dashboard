@@ -237,13 +237,13 @@ function MessageBubble({
       </div>
 
       <div
-        className={`max-w-[78%] px-4 py-3 rounded-2xl text-sm leading-relaxed ${
+        className={`max-w-[88%] sm:max-w-[78%] px-3 sm:px-4 py-3 rounded-2xl text-sm leading-relaxed break-words ${
           isParent
             ? 'bg-slate-700 text-white rounded-tr-sm'
             : 'bg-orange-500/15 text-orange-100 border border-orange-500/20 rounded-tl-sm'
         }`}
       >
-        <p className="whitespace-pre-wrap">{displayText}</p>
+        <p className="whitespace-pre-wrap break-words [overflow-wrap:anywhere]">{displayText}</p>
       </div>
     </div>
   );
@@ -330,8 +330,8 @@ function NewConversationModal({
     : 'Write your message here…';
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
-      <div className="bg-slate-800 border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-[100] flex items-center justify-center p-2 sm:p-4">
+      <div className="bg-slate-800 border border-white/10 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden max-h-[92dvh] flex flex-col min-w-0">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-4 border-b border-white/10 shrink-0">
           <div>
@@ -348,7 +348,7 @@ function NewConversationModal({
           </button>
         </div>
 
-        <form onSubmit={handleSubmit} className="p-6 space-y-4 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-4 overflow-y-auto min-h-0">
           {/* Select recipient */}
           <div>
             <label className="text-xs font-semibold text-slate-400 block mb-2">
@@ -408,7 +408,7 @@ function NewConversationModal({
                 Leave Period{' '}
                 <span className="text-gray-400 font-normal">(optional)</span>
               </p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 block mb-1">From Date</label>
                   <input
@@ -512,11 +512,12 @@ function NewConversationModal({
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 function CommunicationCenterInner() {
-  const { studentId, setStudentId, parentId, language, setLanguage } = useDashboard();
+  const { studentId, setStudentId, parentId, parentName, language, setLanguage } = useDashboard();
   const searchParams = useSearchParams();
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading,     setIsLoading]     = useState(true);
+  const [conversationError, setConversationError] = useState('');
   const [selected,      setSelected]      = useState<Conversation | null>(null);
   const [messages,      setMessages]      = useState<Message[]>([]);
   const [msgLoading,    setMsgLoading]    = useState(false);
@@ -574,13 +575,51 @@ function CommunicationCenterInner() {
 
   // Load conversations — guard against firing before real IDs are available
   const loadConversations = useCallback(async () => {
-    if (!studentId || !parentId) return;
+    if (!studentId || !parentId) {
+      setConversations([]);
+      setConversationError('');
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
+    setConversationError('');
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
     try {
-      console.log('[SSS] CommunicationCenter: loading conversations for student', studentId, 'parent', parentId);
-      const data = await fetchConversations(studentId, parentId);
+      console.log(
+        '[SSS] CommunicationCenter: loading conversations for student',
+        studentId,
+        'parent',
+        parentId
+      );
+
+      // Prevent the UI from spinning forever if the API request never settles.
+      const timeout = new Promise<never>((_, reject) => {
+        timeoutId = setTimeout(
+          () => reject(new Error('Loading conversations timed out. Please check the API/server connection and try again.')),
+          15000
+        );
+      });
+
+      const result = await Promise.race([
+        fetchConversations(studentId, parentId),
+        timeout,
+      ]);
+
+      const data = Array.isArray(result) ? result : [];
       setConversations(data);
+    } catch (error) {
+      console.error('[SSS] CommunicationCenter: failed to load conversations', error);
+      setConversations([]);
+      setConversationError(
+        error instanceof Error
+          ? error.message
+          : 'Could not load conversations. Please try again.'
+      );
     } finally {
+      if (timeoutId) clearTimeout(timeoutId);
       setIsLoading(false);
     }
   }, [studentId, parentId]);
@@ -611,10 +650,16 @@ function CommunicationCenterInner() {
     setPrefilledSubject(subj);
     setPrefilledCategory(cat);
     if (recipients.length === 0) {
-      fetchConversationRecipients(studentId).then(data => {
-        setRecipients(data);
-        setShowModal(true);
-      });
+      fetchConversationRecipients(studentId)
+        .then(data => {
+          setRecipients(Array.isArray(data) ? data : []);
+          setShowModal(true);
+        })
+        .catch(error => {
+          console.error('[SSS] CommunicationCenter: failed to load recipients', error);
+          setRecipients([]);
+          setShowModal(true);
+        });
     } else {
       setShowModal(true);
     }
@@ -623,7 +668,12 @@ function CommunicationCenterInner() {
 
   useEffect(() => {
     if (showModal && recipients.length === 0) {
-      fetchConversationRecipients(studentId).then(setRecipients);
+      fetchConversationRecipients(studentId)
+        .then(data => setRecipients(Array.isArray(data) ? data : []))
+        .catch(error => {
+          console.error('[SSS] CommunicationCenter: failed to load recipients', error);
+          setRecipients([]);
+        });
     }
   }, [showModal, studentId, recipients.length]);
 
@@ -696,21 +746,31 @@ function CommunicationCenterInner() {
   }), [conversations, filter, search, convTranslations]);
 
   return (
-    <div className="min-h-full flex flex-col font-sans text-slate-200">
+    <div className="w-full min-w-0 min-h-full flex flex-col overflow-x-hidden font-sans text-slate-200">
       <TopBar
         studentId={studentId}
         setStudentId={setStudentId}
         parentId={parentId}
+        parentName={parentName}
         language={language}
         setLanguage={setLanguage}
         isLoading={isLoading}
       />
 
       {/* Two-panel layout */}
-      <div className="flex-1 flex overflow-hidden" style={{ height: 'calc(100vh - 72px)' }}>
+     <div
+  className="w-full min-w-0 flex-1 flex overflow-hidden"
+  style={{ height: 'calc(100dvh - 72px)', minHeight: 0 }}
+>
 
         {/* ── LEFT PANEL: Conversation List ── */}
-        <div className="w-80 shrink-0 bg-slate-900/50 border-r border-white/10 flex flex-col overflow-hidden">
+       <div
+  className={`${
+    selected ? 'hidden md:flex' : 'flex'
+  } w-full md:w-80 md:shrink-0 min-w-0 min-h-0 bg-slate-900/50 border-r border-white/10 flex-col overflow-hidden`}
+>
+
+  
 
           {/* Header */}
           <div className="px-4 pt-4 pb-3 border-b border-white/10">
@@ -758,9 +818,28 @@ function CommunicationCenterInner() {
 
           {/* Conversation list */}
           <div className="flex-1 overflow-y-auto p-2 space-y-0.5">
-            {isLoading ? (
-              <div className="flex justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400" />
+            {!studentId || !parentId ? (
+              <div className="px-4 py-12 text-center">
+                <p className="text-sm font-semibold text-slate-300">Parent or child details are not ready</p>
+                <p className="mt-2 text-xs text-slate-500">Please reselect the child or refresh the page.</p>
+              </div>
+            ) : isLoading ? (
+              <div className="flex flex-col items-center justify-center gap-3 px-4 py-12 text-center">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
+                <p className="text-xs text-slate-400">Loading conversations…</p>
+              </div>
+            ) : conversationError ? (
+              <div className="flex flex-col items-center justify-center px-4 py-12 text-center">
+                <ChatBubbleLeftRightIcon className="mb-3 h-10 w-10 text-slate-600" />
+                <p className="text-sm font-semibold text-slate-300">Unable to load conversations</p>
+                <p className="mt-2 break-words text-xs text-slate-500">{conversationError}</p>
+                <button
+                  type="button"
+                  onClick={() => { void loadConversations(); }}
+                  className="mt-4 rounded-xl bg-orange-500 px-4 py-2 text-xs font-bold text-white hover:bg-orange-600"
+                >
+                  Try again
+                </button>
               </div>
             ) : filtered.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-center px-4">
@@ -784,7 +863,13 @@ function CommunicationCenterInner() {
         </div>
 
         {/* ── RIGHT PANEL: Thread ── */}
-        <div className="flex-1 flex flex-col overflow-hidden">
+        <div
+  className={`${
+    selected
+      ? 'flex'
+      : 'hidden md:flex'
+  } flex-1 min-w-0 min-h-0 flex-col overflow-hidden`}
+>
           {!selected ? (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
               <ChatBubbleLeftRightIcon className="w-14 h-14 text-slate-600 mb-4" />
@@ -803,7 +888,14 @@ function CommunicationCenterInner() {
           ) : (
             <>
               {/* Thread header */}
-              <div className="px-5 py-4 border-b border-white/10 bg-slate-900/30 shrink-0">
+              <div className="px-4 md:px-5 py-4 border-b border-white/10 bg-slate-900/30 shrink-0">
+              <button
+  type="button"
+  onClick={() => setSelected(null)}
+  className="md:hidden mb-3 text-sm text-orange-400 font-semibold"
+>
+  ← Back to conversations
+</button>
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center text-white text-sm font-black shrink-0">
                     {initials(selected.recipient_name)}
@@ -838,7 +930,7 @@ function CommunicationCenterInner() {
               </div>
 
               {/* Messages area */}
-              <div className="flex-1 overflow-y-auto px-5 py-4">
+              <div className="flex-1 min-w-0 overflow-y-auto px-3 md:px-5 py-4">
                 {msgLoading ? (
                   <div className="flex justify-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-400" />
@@ -882,7 +974,7 @@ function CommunicationCenterInner() {
               </div>
 
               {/* Reply input with voice button */}
-              <div className="px-4 py-3 border-t border-white/10 bg-slate-900/30 shrink-0">
+              <div className="px-3 sm:px-4 py-3 border-t border-white/10 bg-slate-900/30 shrink-0">
                 <form onSubmit={handleSend} className="flex gap-2 items-end">
                   <textarea
                     rows={2}
@@ -895,7 +987,7 @@ function CommunicationCenterInner() {
                       }
                     }}
                     placeholder="Write a message to the teacher…"
-                    className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-orange-400 resize-none transition-all"
+                    className="flex-1 min-w-0 bg-white/5 border border-white/10 rounded-xl px-3 sm:px-4 py-2.5 text-sm text-white placeholder:text-slate-500 outline-none focus:border-orange-400 resize-none transition-all"
                   />
                   <MicBtn
                     fieldKey="reply"

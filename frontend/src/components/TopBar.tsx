@@ -17,10 +17,6 @@ import {
   Bars3Icon,
 } from '@heroicons/react/24/outline';
 
-/* ============================================================
-   TYPES
-   ============================================================ */
-
 interface TopBarProps {
   studentId: number;
   setStudentId: (studentId: number) => void;
@@ -42,10 +38,6 @@ interface Notification {
   date?: string;
   link?: string;
 }
-
-/* ============================================================
-   LOCAL STORAGE HELPERS
-   ============================================================ */
 
 function getReadIds(
   studentId: number,
@@ -87,10 +79,6 @@ function saveReadIds(
   }
 }
 
-/* ============================================================
-   NOTIFICATION ICON
-   ============================================================ */
-
 function notifIcon(type?: string): string {
   const map: Record<string, string> = {
     ticket_reply: '💬',
@@ -104,10 +92,6 @@ function notifIcon(type?: string): string {
     ? map[type]
     : '🔔';
 }
-
-/* ============================================================
-   DYNAMIC PARENT INITIALS
-   ============================================================ */
 
 function getInitials(name?: string): string {
   if (!name || !name.trim()) {
@@ -130,10 +114,6 @@ function getInitials(name?: string): string {
   }`.toUpperCase();
 }
 
-/* ============================================================
-   TOP BAR
-   ============================================================ */
-
 export default function TopBar({
   studentId,
   setStudentId,
@@ -143,10 +123,6 @@ export default function TopBar({
   setLanguage,
   isLoading = false,
 }: TopBarProps) {
-  /* ==========================================================
-     STATE
-     ========================================================== */
-
   const [showNotifications, setShowNotifications] =
     useState(false);
 
@@ -159,19 +135,11 @@ export default function TopBar({
   const bellRef =
     useRef<HTMLDivElement>(null);
 
-  /* ==========================================================
-     DYNAMIC PARENT DISPLAY
-     ========================================================== */
-
   const displayParentName =
     parentName?.trim() || 'Parent';
 
   const parentInitials =
     getInitials(displayParentName);
-
-  /* ==========================================================
-     LOAD NOTIFICATIONS
-     ========================================================== */
 
   const loadNotifications = useCallback(
     async () => {
@@ -196,17 +164,9 @@ export default function TopBar({
     [studentId]
   );
 
-  /* ==========================================================
-     FETCH NOTIFICATIONS
-     ========================================================== */
-
   useEffect(() => {
     loadNotifications();
   }, [loadNotifications]);
-
-  /* ==========================================================
-     RESTORE NOTIFICATION READ STATE
-     ========================================================== */
 
   useEffect(() => {
     if (!studentId) {
@@ -237,10 +197,6 @@ export default function TopBar({
 
     setReadIds(ids);
   }, [studentId]);
-
-  /* ==========================================================
-     REAL-TIME NOTIFICATION READ SYNC
-     ========================================================== */
 
   useEffect(() => {
     const handler = (event: Event) => {
@@ -277,10 +233,6 @@ export default function TopBar({
     };
   }, [studentId]);
 
-  /* ==========================================================
-     CLOSE NOTIFICATION DROPDOWN
-     ========================================================== */
-
   useEffect(() => {
     if (!showNotifications) {
       return;
@@ -311,10 +263,6 @@ export default function TopBar({
     };
   }, [showNotifications]);
 
-  /* ==========================================================
-     UNREAD NOTIFICATIONS
-     ========================================================== */
-
   const unreadNotifications =
     notifications.filter(
       (notification) =>
@@ -323,10 +271,6 @@ export default function TopBar({
 
   const unreadCount =
     unreadNotifications.length;
-
-  /* ==========================================================
-     MARK ONE NOTIFICATION AS READ
-     ========================================================== */
 
   const markOneRead = (
     id: string
@@ -348,10 +292,6 @@ export default function TopBar({
       next
     );
 
-    /*
-     * Maintain notice-specific
-     * read state for the Notices page.
-     */
     if (id.startsWith('not_')) {
       const noticeId =
         parseInt(
@@ -387,10 +327,6 @@ export default function TopBar({
       }
     }
   };
-
-  /* ==========================================================
-     MARK ALL NOTIFICATIONS AS READ
-     ========================================================== */
 
   const markAllRead = (): void => {
     const next =
@@ -461,13 +397,11 @@ export default function TopBar({
     }
   };
 
-  /* ==========================================================
-     UI
-     ========================================================== */
-
   return (
     <header
       className="
+        w-full
+        min-w-0
         flex
         flex-col
         md:flex-row
@@ -485,16 +419,17 @@ export default function TopBar({
         z-20
       "
     >
-      {/* ======================================================
-          LEFT SECTION
-          ====================================================== */}
-
+      {/* LEFT SECTION */}
       <div
         className="
           flex
-          items-center
-          gap-3
+          flex-col
+          md:flex-row
+          items-stretch
+          md:items-center
+          gap-2
           w-full
+          min-w-0
           md:w-auto
         "
       >
@@ -521,53 +456,38 @@ export default function TopBar({
         </button>
 
         {/* Child Selector */}
-        <ChildSelector
-          currentStudentId={
-            studentId
-          }
-          onSelect={
-            setStudentId
-          }
-          parentId={
-            parentId
-          }
-          disabled={
-            isLoading
-          }
-        />
+        <div className="w-full min-w-0 md:w-auto">
+          <ChildSelector
+            currentStudentId={studentId}
+            onSelect={setStudentId}
+            parentId={parentId}
+            disabled={isLoading}
+          />
+        </div>
 
         {/* Language Selector */}
-        <LanguageSelector
-          currentLang={
-            language
-          }
-          onSelect={
-            setLanguage
-          }
-          disabled={
-            isLoading
-          }
-        />
+        <div className="w-full md:w-auto shrink-0">
+          <LanguageSelector
+            currentLang={language}
+            onSelect={setLanguage}
+            disabled={isLoading}
+          />
+        </div>
       </div>
 
-      {/* ======================================================
-          RIGHT SECTION
-          ====================================================== */}
-
+      {/* RIGHT SECTION */}
       <div
         className="
           flex
           items-center
-          gap-6
+          gap-3
           w-full
+          min-w-0
           md:w-auto
           justify-end
         "
       >
-        {/* ====================================================
-            NOTIFICATIONS
-            ==================================================== */}
-
+        {/* NOTIFICATIONS */}
         <div
           ref={bellRef}
           className="relative"
@@ -593,7 +513,6 @@ export default function TopBar({
           >
             <BellIcon className="w-6 h-6" />
 
-            {/* Unread Count */}
             {unreadCount > 0 && (
               <span
                 className="
@@ -620,27 +539,30 @@ export default function TopBar({
             )}
           </button>
 
-          {/* ==================================================
-              NOTIFICATION DROPDOWN
-              ================================================== */}
-
+          {/* NOTIFICATION DROPDOWN */}
           {showNotifications && (
-            <div
-              className="
-                absolute
-                top-10
-                right-0
-                w-80
-                bg-slate-800
-                border
-                border-white/10
-                rounded-2xl
-                shadow-xl
-                z-50
-                overflow-hidden
-              "
+  <div
+    className="
+      fixed
+      top-[308px]
+      left-2
+      right-2
+      w-auto
+      bg-slate-800
+      border
+      border-white/10
+      rounded-2xl
+      shadow-xl
+      z-50
+      overflow-hidden
+      sm:absolute
+      sm:top-10
+      sm:left-auto
+      sm:right-0
+      sm:w-80
+    "
             >
-              {/* Header */}
+              {/* HEADER */}
               <div
                 className="
                   p-4
@@ -650,6 +572,7 @@ export default function TopBar({
                   flex
                   justify-between
                   items-center
+                  gap-3
                 "
               >
                 <h3
@@ -657,10 +580,10 @@ export default function TopBar({
                     font-bold
                     text-white
                     text-sm
+                    min-w-0
                   "
                 >
                   Notifications{' '}
-
                   {unreadCount > 0 && (
                     <span className="text-orange-500">
                       ({unreadCount} new)
@@ -679,6 +602,7 @@ export default function TopBar({
                       text-orange-600
                       font-semibold
                       hover:underline
+                      shrink-0
                     "
                   >
                     Mark all as read
@@ -686,14 +610,15 @@ export default function TopBar({
                 )}
               </div>
 
-              {/* Notification List */}
+              {/* NOTIFICATION LIST */}
               <div
                 className="
                   max-h-80
                   overflow-y-auto
                 "
               >
-                {unreadNotifications.length === 0 ? (
+                {unreadNotifications.length ===
+                0 ? (
                   <div className="p-6 text-center">
                     <p className="text-2xl mb-2">
                       ✅
@@ -753,7 +678,7 @@ export default function TopBar({
                           bg-orange-500/5
                         "
                       >
-                        {/* Icon */}
+                        {/* ICON */}
                         <span
                           className="
                             text-xl
@@ -765,7 +690,7 @@ export default function TopBar({
                           )}
                         </span>
 
-                        {/* Content */}
+                        {/* CONTENT */}
                         <div
                           className="
                             flex-1
@@ -775,8 +700,9 @@ export default function TopBar({
                           <div
                             className="
                               flex
-                              items-center
+                              items-start
                               gap-2
+                              min-w-0
                             "
                           >
                             <p
@@ -784,8 +710,9 @@ export default function TopBar({
                                 text-sm
                                 text-white
                                 font-semibold
-                                truncate
                                 flex-1
+                                min-w-0
+                                break-words
                               "
                             >
                               {
@@ -800,6 +727,7 @@ export default function TopBar({
                                 h-2
                                 rounded-full
                                 bg-orange-500
+                                mt-1
                               "
                             />
                           </div>
@@ -810,6 +738,7 @@ export default function TopBar({
                               text-slate-400
                               mt-0.5
                               line-clamp-2
+                              break-words
                             "
                           >
                             {
@@ -846,7 +775,7 @@ export default function TopBar({
                 )}
               </div>
 
-              {/* View All */}
+              {/* VIEW ALL */}
               <div
                 className="
                   p-3
@@ -879,24 +808,20 @@ export default function TopBar({
           )}
         </div>
 
-        {/* ====================================================
-            PARENT PROFILE DISPLAY
-            No dropdown
-            No Dashboard
-            No Logout
-            ==================================================== */}
-
+        {/* PARENT PROFILE */}
         <div
           className="
             flex
             items-center
             gap-3
             border-l
-            pl-6
+            pl-3
+            sm:pl-6
             border-white/10
+            min-w-0
           "
         >
-          {/* Dynamic Initials */}
+          {/* INITIALS */}
           <div
             className="
               w-10
@@ -919,13 +844,14 @@ export default function TopBar({
             {parentInitials}
           </div>
 
-          {/* Dynamic Parent Name */}
+          {/* PARENT NAME */}
           <div
             className="
               text-sm
               hidden
               sm:block
               text-left
+              min-w-0
             "
           >
             <p
@@ -941,6 +867,8 @@ export default function TopBar({
               className="
                 font-bold
                 text-white
+                truncate
+                max-w-[180px]
               "
             >
               {displayParentName}

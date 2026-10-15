@@ -5,6 +5,7 @@ export function useDashboardState() {
   const [mounted, setMounted] = useState(false);
   const [studentId, setStudentId] = useState<number>(0);
   const [parentId, setParentId] = useState<number>(0);
+  const [parentName, setParentName] = useState<string>('');
   const [language, setLanguage] = useState<string>('en');
 
   useEffect(() => {
@@ -81,6 +82,7 @@ export function useDashboardState() {
         }
 
         setParentId(resolvedParentId);
+        setParentName(parent?.full_name || '');
         localStorage.setItem(
           'sss_parent_id',
           resolvedParentId.toString()
@@ -201,6 +203,7 @@ export function useDashboardState() {
     setStudentId: updateStudentId,
     parentId,
     setParentId: updateParentId,
+    parentName,
     language,
     setLanguage: updateLanguage,
   };

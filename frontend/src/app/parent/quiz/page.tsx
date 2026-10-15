@@ -51,7 +51,14 @@ const CircularProgress = ({ pct, colorHex }: { pct: number; colorHex: string }) 
 };
 
 export default function QuizPerformancePage() {
-  const { studentId, setStudentId, parentId, language, setLanguage } = useDashboard();
+  const {
+  studentId,
+  setStudentId,
+  parentId,
+  parentName,
+  language,
+  setLanguage,
+} = useDashboard();
   const texts = useMemo(
   () => [
     'Quiz Performance',
@@ -184,26 +191,40 @@ useEffect(() => {
   };
 }, [modalData, language]);
 
-  useEffect(() => {
-    if (!studentId) return; // wait for real studentId
-    const load = async () => {
-      setIsLoading(true);
-      setModalData(null);
-      setTab('All');
-      setSearch('');
-      setSubj('All');
-      try {
-        console.log('[SSS] Quiz: fetching for student_id', studentId);
-        const data = await fetchQuizHistory(studentId);
-        setQuizzes(data);
-      } catch (e) {
-        console.error('[SSS] Quiz: failed to load quizzes', e);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [studentId]);
+ useEffect(() => {
+  if (!studentId) {
+    setQuizzes([]);
+    setIsLoading(false);
+    setModalData(null);
+    setTab('All');
+    setSearch('');
+    setSubj('');
+    return;
+  }
+
+  const load = async () => {
+    setIsLoading(true);
+    setModalData(null);
+    setTab('All');
+    setSearch('');
+    setSubj('All');
+
+    try {
+      console.log('[SSS] Quiz: fetching for student_id', studentId);
+
+      const data = await fetchQuizHistory(studentId);
+
+      setQuizzes(data);
+    } catch (e) {
+      console.error('[SSS] Quiz: failed to load quizzes', e);
+      setQuizzes([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  load();
+}, [studentId]);
 
   const subjects = useMemo(() => ['All', ...Array.from(new Set(quizzes.map(q => q.subject)))], [quizzes]);
 
@@ -254,7 +275,15 @@ useEffect(() => {
 
   return (
     <div className="min-h-full flex flex-col font-sans">
-      <TopBar studentId={studentId} setStudentId={setStudentId} parentId={parentId} language={language} setLanguage={setLanguage} isLoading={isLoading} />
+      <TopBar
+  studentId={studentId}
+  setStudentId={setStudentId}
+  parentId={parentId}
+  parentName={parentName}
+  language={language}
+  setLanguage={setLanguage}
+  isLoading={isLoading}
+/>
 
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -279,7 +308,7 @@ useEffect(() => {
           ) : (
             <>
               {/* ── SUMMARY CARDS ── */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {[
 { l: averageText, v: `${avgScore.toFixed(1)}%`, s: overallPerformanceText },
 { l: highestText, v: `${highest}%`, s: topResultText },
@@ -295,11 +324,11 @@ useEffect(() => {
               </div>
 
               {/* ── FILTER BAR ── */}
-              <div className="bg-white/5 rounded-xl border border-white/10 p-3 flex flex-wrap items-center gap-3">
+              <div className="bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
                 <select
   value={subj}
   onChange={e => setSubj(e.target.value)}
-  className="bg-slate-800 border border-white/20 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none min-w-[140px]"
+  className="w-full sm:w-auto bg-slate-800 border border-white/20 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none min-w-[140px]"
 >
   {subjects.map(s => (
     <option
@@ -311,7 +340,7 @@ useEffect(() => {
     </option>
   ))}
 </select>
-                <div className="flex-1 relative min-w-[200px]">
+                <div className="flex-1 relative w-full min-w-0">
                  <span className="absolute left-3 top-2.5 text-sm text-slate-400">🔍</span>
                   <input value={search} onChange={e => setSearch(e.target.value)}
                     placeholder={searchText}
@@ -320,13 +349,13 @@ useEffect(() => {
               </div>
 
               {/* ── TABS ── */}
-              <div className="flex border-b border-white/10 overflow-x-auto no-scrollbar">
+              <div className="flex border-b border-white/10 overflow-x-auto no-scrollbar scrollbar-hide">
                 {TABS.map(t => {
                   const count = t === 'All' ? quizzes.length : quizzes.filter(q => q.status === t).length;
                   const active = tab === t;
                   return (
                     <button key={t} onClick={() => setTab(t)}
-                      className="px-5 py-3 text-sm font-bold whitespace-nowrap border-b-2 -mb-px flex items-center gap-2 transition-colors"
+                      className="shrink-0 px-3 sm:px-5 py-3 text-sm font-bold whitespace-nowrap border-b-2 -mb-px flex items-center gap-2 transition-colors"
                       style={{
                         borderColor: active ? '#EA580C' : 'transparent',
                         color: active ? '#EA580C' : '#94A3B8'
@@ -342,27 +371,37 @@ useEffect(() => {
               </div>
 
               {/* ── QUIZ GRID ── */}
-              {filtered.length === 0 ? (
-                <div className="py-20 text-center bg-white/5 rounded-2xl border border-white/10 border-dashed">
-                  <p className="text-4xl mb-3">📭</p>
-                  <p className="text-white font-bold">
-  {noQuizzesText}
-</p>
-                 <p className="text-slate-400 text-sm mt-1">
-  {tryAgainText}
-</p>
-                </div>
-              ) : (
+   {filtered.length === 0 ? (
+  <div className="py-20 text-center bg-white/5 rounded-2xl border border-white/10 border-dashed">
+    <p className="text-4xl mb-3">📭</p>
+
+    <p className="text-white font-bold">
+      {studentId === 0 ? 'No Data Available' : noQuizzesText}
+    </p>
+
+    <p className="text-slate-400 text-sm mt-1">
+      {studentId === 0
+        ? 'No child is associated with this parent account.'
+        : tryAgainText}
+    </p>
+  </div>
+): (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
                   {filtered.map(q => {
                     const c = STATUS_COLORS[q.status] || STATUS_COLORS['Average'];
                     return (
                       <div key={q.quiz_id} onClick={() => setModalData(q)}
-                        className="bg-white/5 rounded-2xl border border-white/10 p-5 hover:bg-white/10 transition-all cursor-pointer group flex items-start gap-4">
+                        className="bg-white/5 rounded-2xl border border-white/10 p-4 sm:p-5 hover:bg-white/10 transition-all cursor-pointer group flex items-start gap-4 min-w-0">
                         <CircularProgress pct={q.percentage} colorHex={c.hex} />
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-black uppercase tracking-wider mb-1" style={{ color: c.hex }}>{q.subject}</p>
-                          <h3 className="text-base font-black text-white truncate group-hover:text-orange-400 transition-colors">{q.quiz_title}</h3>
+                          <p
+  className="text-xs font-black uppercase tracking-wider mb-1 truncate max-w-full"
+  style={{ color: c.hex }}
+  title={q.subject}
+>
+  {q.subject}
+</p>
+                          <h3 className="text-base font-black text-white break-words min-w-0 group-hover:text-orange-400 transition-colors">{q.quiz_title}</h3>
                           <div className="flex flex-wrap items-center gap-3 mt-2">
                             <p className="text-xs font-bold text-slate-400">{fmt(q.quiz_date)}</p>
                             <p className="text-xs font-bold text-slate-400 bg-white/10 px-2 py-0.5 rounded-md">
@@ -388,24 +427,26 @@ useEffect(() => {
       {modalData && (() => {
         const c = STATUS_COLORS[modalData.status] || STATUS_COLORS['Average'];
         return (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" onClick={() => setModalData(null)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4" onClick={() => setModalData(null)}>
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
-            <div className="relative bg-slate-800 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg overflow-hidden z-[110] border border-white/10"
+            <div
+  className="relative bg-slate-800 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg max-h-[92vh] overflow-hidden z-[110] border border-white/10"
               onClick={e => e.stopPropagation()}>
               
-              <div className="shrink-0 p-6 pb-0 flex justify-between items-start">
+              <div className="shrink-0 p-4 sm:p-6 pb-0 flex justify-between items-start">
                 <div className="w-10 h-10 rounded-full flex items-center justify-center text-xl bg-white/10">📋</div>
                 <button onClick={() => setModalData(null)} className="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-white/10 hover:text-white transition-colors text-xl font-bold">×</button>
               </div>
 
-              <div className="px-6 py-4 border-b border-white/10">
-                <h2 className="text-2xl font-black text-white leading-tight">{translatedQuizTitle}</h2>
-                <p className="text-sm font-bold text-slate-400 mt-1">
-  {modalData.subject} • {conductedOnText} {fmt(modalData.quiz_date)}
-</p>
-              </div>
-
-              <div className="p-6 space-y-6 overflow-y-auto max-h-[60vh]">
+<div className="px-4 sm:px-6 py-4 border-b border-white/10 min-w-0">
+  <h2 className="text-xl sm:text-2xl font-black text-white leading-tight break-words [overflow-wrap:anywhere] min-w-0 max-w-full">
+    {translatedQuizTitle || modalData.quiz_title}
+  </h2>
+  <p className="text-sm font-bold text-slate-400 mt-2 leading-relaxed break-words [overflow-wrap:anywhere] min-w-0 max-w-full">
+    {translatedSubject || modalData.subject} • {conductedOnText} {fmt(modalData.quiz_date)}
+  </p>
+</div>
+              <div className="p-4 sm:p-6 space-y-6 overflow-y-auto max-h-[60vh] min-w-0">
                 
                 {/* Result Block */}
                 <div className="flex items-center gap-5 p-4 rounded-2xl" style={{ background: c.bg, border: `1px solid ${c.border}` }}>
@@ -421,20 +462,34 @@ useEffect(() => {
                   </div>
                 </div>
 
-                {/* Details Grid */}
-                <div>
-                   <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">{quizInformationText}</p>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{teacherText}</p>
-                      <p className="text-sm font-bold text-white">{translatedTeacher}</p>
-                    </div>
-                    <div className="p-3 bg-white/5 rounded-xl border border-white/10">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">{subjectText}</p>
-                      <p className="text-sm font-bold text-white">{translatedSubject}</p>
-                    </div>
-                  </div>
-                </div>
+               
+{/* Details Grid */}
+<div className="min-w-0">
+  <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-3">
+    {quizInformationText}
+  </p>
+
+  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+    <div className="min-w-0 p-3 bg-white/5 rounded-xl border border-white/10">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        {teacherText}
+      </p>
+      <p className="text-sm font-bold text-white break-words [overflow-wrap:anywhere]">
+        {translatedTeacher}
+      </p>
+    </div>
+
+    <div className="min-w-0 p-3 bg-white/5 rounded-xl border border-white/10">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+        {subjectText}
+      </p>
+      <p className="text-sm font-bold text-white break-words [overflow-wrap:anywhere]">
+        {translatedSubject}
+      </p>
+    </div>
+  </div>
+</div>
+
 
                 {/* Remarks & Suggestion */}
                 <div>

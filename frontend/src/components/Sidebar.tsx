@@ -123,32 +123,31 @@ export default function Sidebar() {
       {/* =========================================================
           SIDEBAR
           ========================================================= */}
-      <aside
-        className={`
-          w-64
-          bg-slate-900/95
-          backdrop-blur-md
-          text-white
-          flex
-          flex-col
-          h-screen
-          fixed
-          left-0
-          top-0
-          overflow-y-auto
-          z-40
-          border-r
-          border-white/5
-          transition-transform
-          duration-300
-          ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
-        `}
-      >
+ <aside
+  className={`
+    w-full md:w-64
+    bg-[#0f172a]
+    text-white
+    flex
+    flex-col
+    h-screen
+    fixed
+    left-0
+    top-0
+    overflow-y-auto
+    z-40
+    border-r
+    border-white/5
+    transition-transform
+    duration-300
+    ease-in-out
+    ${isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
+  `}
+>
         {/* =======================================================
             SIDEBAR HEADER
             ======================================================= */}
-        <div className="p-6 flex items-center gap-3 border-b border-white/10">
+        <div className="px-6 py-7 flex items-center gap-4 border-b border-white/10">
           <div className="flex items-center gap-3 flex-1 min-w-0">
             <Image
               src="/logo.jpg"

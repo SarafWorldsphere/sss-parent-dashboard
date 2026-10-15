@@ -241,13 +241,14 @@ const BAR_COLORS = [
 // ── Main Page ─────────────────────────────────────────────────────────────
 
 export default function ParentDashboard() {
-  const {
-    studentId,
-    setStudentId,
-    parentId,
-    language,
-    setLanguage,
-  } = useDashboard();
+ const {
+  studentId,
+  setStudentId,
+  parentId,
+  parentName,
+  language,
+  setLanguage,
+} = useDashboard();
 
   const [data, setData] = useState<any>(null);
 
@@ -273,11 +274,11 @@ export default function ParentDashboard() {
       setAiErrorType(null);
 
       // Use the dashboard data already fetched.
-      if (!data) {
-        throw new Error(
-          'Dashboard data is not available.'
-        );
-      }
+     if (!data) {
+      setAiStatus('error');
+      setAiErrorType('no-data');
+      return;
+    }
 
       await new Promise((resolve) =>
         setTimeout(resolve, 700)
@@ -359,9 +360,11 @@ export default function ParentDashboard() {
   // ── Load Dashboard ─────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (!studentId) {
-      return;
-    }
+  if (!studentId) {
+    setIsLoading(false);
+    setData(null);
+    return;
+  }
 
     const load = async () => {
       setIsLoading(true);
@@ -424,13 +427,6 @@ export default function ParentDashboard() {
   // If none exists, we show "Parent" rather than showing
   // another user's name.
 
-  const parentName =
-    data?.parent?.full_name ??
-    data?.parent?.name ??
-    data?.parent?.parent_name ??
-    data?.parent_name ??
-    data?.parent_full_name ??
-    'Parent';
 
   // Generate initials dynamically from the parent name.
   const parentInitials = useMemo(() => {
@@ -677,7 +673,7 @@ export default function ParentDashboard() {
                   </p>
 
                   {studentName && (
-                    <p className="text-xs text-slate-400 mt-0.5 truncate">
+                    <p className="text-xs text-slate-400 mt-0.5 break-words">
                       Viewing{' '}
                       <span className="font-semibold text-slate-300">
                         {studentName}
@@ -812,20 +808,20 @@ export default function ParentDashboard() {
                               />
 
                               <div className="flex-1 min-w-0">
-                                <p className="text-sm font-medium text-white truncate">
+                                <p className="text-sm font-medium text-white break-words">
                                   {dispAlertMsgs[i] ??
                                     a.message}
                                 </p>
 
                                 {a.subject && (
-                                  <p className="text-[11px] text-slate-400 truncate">
+                                  <p className="text-[11px] text-slate-400 break-words">
                                     {a.subject}
                                   </p>
                                 )}
                               </div>
 
                               {a.due && (
-                                <span className="text-[11px] text-slate-400 shrink-0">
+                                <span className="text-[11px] text-slate-400 shrink-0 ml-auto">
                                   {a.due}
                                 </span>
                               )}
@@ -880,7 +876,7 @@ export default function ParentDashboard() {
                             return (
                               <div
                                 key={i}
-                                className="flex items-center gap-3 p-2.5 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
+                                className="flex flex-wrap items-start gap-2.5 p-2.5 rounded-xl hover:bg-white/10 border border-transparent hover:border-white/10 transition-all"
                               >
                                 <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex flex-col items-center justify-center shrink-0">
                                   <span className="text-[8px] font-black text-orange-400">
@@ -892,7 +888,7 @@ export default function ParentDashboard() {
                                   </span>
                                 </div>
 
-                                <div className="flex-1 min-w-0">
+                                <div className="flex-1 min-w-[150px]">
                                   <p className="text-sm font-semibold text-white truncate">
                                     {dispDeadlineTitles[
                                       i

@@ -208,12 +208,13 @@ const Badge = ({
 
 export default function AssignmentsPage() {
   const {
-    studentId,
-    setStudentId,
-    parentId,
-    language,
-    setLanguage,
-  } = useDashboard();
+  studentId,
+  setStudentId,
+  parentId,
+  parentName,
+  language,
+  setLanguage,
+} = useDashboard();
 
   const router = useRouter();
 
@@ -1358,13 +1359,14 @@ export default function AssignmentsPage() {
   return (
     <div className="min-h-full flex flex-col font-sans">
       <TopBar
-        studentId={studentId}
-        setStudentId={setStudentId}
-        parentId={parentId}
-        language={language}
-        setLanguage={setLanguage}
-        isLoading={isLoading}
-      />
+  studentId={studentId}
+  setStudentId={setStudentId}
+  parentId={parentId}
+  parentName={parentName}
+  language={language}
+  setLanguage={setLanguage}
+  isLoading={isLoading}
+/>
 
       {toast && (
         <div
@@ -1485,7 +1487,7 @@ export default function AssignmentsPage() {
               </div>
 
               {/* CARDS */}
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3">
                 {cards.map((card) => (
                   <div
                     key={card.label}
@@ -1539,7 +1541,7 @@ export default function AssignmentsPage() {
 
               {/* FILTERS */}
               <div
-                className="bg-slate-800 rounded-xl border p-3 flex flex-wrap gap-2.5 items-center"
+                className="bg-slate-800 rounded-xl border p-3 flex flex-col sm:flex-row sm:flex-wrap gap-2.5 items-stretch sm:items-center"
                 style={{
                   borderColor:
                     'rgba(255,255,255,0.1)',
@@ -1552,7 +1554,7 @@ export default function AssignmentsPage() {
                       event.target.value
                     )
                   }
-                  className="text-sm font-medium rounded-lg px-3 py-2 border outline-none cursor-pointer"
+                  className="w-full sm:w-auto text-sm font-medium rounded-lg px-3 py-2 border outline-none cursor-pointer"
                   style={{
                     color: '#F8FAFC',
                     borderColor:
@@ -1593,7 +1595,7 @@ export default function AssignmentsPage() {
 
                     setTab(value);
                   }}
-                  className="text-sm font-medium rounded-lg px-3 py-2 border outline-none cursor-pointer"
+                  className="w-full sm:w-auto text-sm font-medium rounded-lg px-3 py-2 border outline-none cursor-pointer"
                   style={{
                     color: '#F8FAFC',
                     borderColor:
@@ -1621,7 +1623,7 @@ export default function AssignmentsPage() {
                   )}
                 </select>
 
-                <div className="flex-1 relative min-w-[200px]">
+                <div className="flex-1 relative w-full min-w-0">
                   <span className="absolute left-3 top-2.5 text-base">
                     🔍
                   </span>
@@ -1672,7 +1674,7 @@ export default function AssignmentsPage() {
 
               {/* TABS */}
               <div
-                className="flex border-b overflow-x-auto"
+                className="flex border-b overflow-x-auto scrollbar-hide"
                 style={{
                   borderColor:
                     'rgba(255,255,255,0.1)',
@@ -1687,7 +1689,7 @@ export default function AssignmentsPage() {
                         item
                       );
                     }}
-                    className="px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors flex items-center gap-1.5"
+                    className="shrink-0 px-3 sm:px-4 py-2.5 text-sm font-semibold whitespace-nowrap border-b-2 -mb-px transition-colors flex items-center gap-1.5"
                     style={{
                       borderColor:
                         tab === item
@@ -1730,7 +1732,171 @@ export default function AssignmentsPage() {
                     'rgba(255,255,255,0.1)',
                 }}
               >
-                <div className="overflow-x-auto">
+                {/* MOBILE ASSIGNMENT CARDS */}
+<div className="md:hidden space-y-3">
+  {rows.length === 0 ? (
+    <div className="text-center py-14">
+      <div className="text-3xl mb-2">📭</div>
+
+      <p
+        className="font-semibold"
+        style={{ color: '#CBD5E1' }}
+      >
+        {studentId === 0
+          ? 'No Data Available'
+          : 'No assignments found'}
+      </p>
+
+      <p
+        className="text-xs mt-1"
+        style={{ color: '#64748B' }}
+      >
+        {studentId === 0
+          ? 'No child is associated with this parent account.'
+          : 'Try adjusting your filters'}
+      </p>
+    </div>
+  ) : (
+    rows.map((assignment, index) => {
+      const days = getDaysTag(
+        assignment.due_date,
+        assignment.status
+      );
+
+      return (
+        <div
+          key={
+            assignment.assignment_id ?? index
+          }
+          onClick={() => setDrawer(assignment)}
+          className="bg-slate-800 border border-white/10 rounded-xl p-4 cursor-pointer active:bg-slate-700 transition-colors min-w-0"
+        >
+          {/* Assignment */}
+          <div className="min-w-0 mb-3">
+            <p
+              className="text-sm font-bold break-words"
+              style={{ color: '#F8FAFC' }}
+            >
+              {assignment.assignment_title}
+            </p>
+
+            {assignment.chapter_name && (
+              <p
+                className="text-xs mt-1 break-words"
+                style={{ color: '#64748B' }}
+              >
+                {assignment.chapter_name}
+              </p>
+            )}
+          </div>
+
+          {/* Subject */}
+          <div className="mb-3">
+            <p
+              className="text-[10px] font-bold uppercase tracking-wider"
+              style={{ color: '#64748B' }}
+            >
+              Subject
+            </p>
+
+            <p
+              className="text-sm font-semibold break-words"
+              style={{ color: '#CBD5E1' }}
+            >
+              {assignment.subject}
+            </p>
+          </div>
+
+          {/* Details */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="min-w-0">
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: '#64748B' }}
+              >
+                Due Date
+              </p>
+
+              <p
+                className="text-sm font-semibold"
+                style={{ color: '#CBD5E1' }}
+              >
+                {formatDate(assignment.due_date)}
+              </p>
+
+              {days && (
+                <p
+                  className="text-[11px] font-semibold mt-0.5"
+                  style={{ color: days.color }}
+                >
+                  {days.text}
+                </p>
+              )}
+            </div>
+
+            <div className="min-w-0">
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: '#64748B' }}
+              >
+                Status
+              </p>
+
+              <div className="mt-1">
+                <Badge status={assignment.status} />
+              </div>
+            </div>
+
+            <div className="min-w-0">
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: '#64748B' }}
+              >
+                Submitted On
+              </p>
+
+              <p
+                className="text-sm font-semibold"
+                style={{ color: '#CBD5E1' }}
+              >
+                {assignment.submitted_at
+                  ? formatDate(assignment.submitted_at)
+                  : '–'}
+              </p>
+            </div>
+
+            <div className="min-w-0">
+              <p
+                className="text-[10px] font-bold uppercase tracking-wider"
+                style={{ color: '#64748B' }}
+              >
+                Marks
+              </p>
+
+              <p
+                className="text-sm font-semibold"
+                style={{ color: '#CBD5E1' }}
+              >
+                {assignment.marks_obtained != null &&
+                assignment.total_marks != null
+                  ? `${assignment.marks_obtained}/${assignment.total_marks}`
+                  : '–'}
+              </p>
+            </div>
+          </div>
+
+          {/* View */}
+          <div className="flex justify-end mt-4 pt-3 border-t border-white/10">
+            <span className="text-sm font-bold text-orange-500">
+              View →
+            </span>
+          </div>
+        </div>
+      );
+    })
+  )}
+</div>
+                <div className="hidden md:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead
                       style={{
@@ -1776,26 +1942,27 @@ export default function AssignmentsPage() {
                             <div className="text-3xl mb-2">
                               📭
                             </div>
+<p
+  className="font-semibold"
+  style={{
+    color: '#CBD5E1',
+  }}
+>
+  {studentId === 0
+    ? 'No Data Available'
+    : 'No assignments found'}
+</p>
 
-                            <p
-                              className="font-semibold"
-                              style={{
-                                color:
-                                  '#CBD5E1',
-                              }}
-                            >
-                              No assignments found
-                            </p>
-
-                            <p
-                              className="text-xs mt-1"
-                              style={{
-                                color:
-                                  '#64748B',
-                              }}
-                            >
-                              Try adjusting your filters
-                            </p>
+<p
+  className="text-xs mt-1"
+  style={{
+    color: '#64748B',
+  }}
+>
+  {studentId === 0
+    ? 'No child is associated with this parent account.'
+    : 'Try adjusting your filters'}
+</p>
                           </td>
                         </tr>
                       ) : (
@@ -2017,26 +2184,24 @@ export default function AssignmentsPage() {
 
       {drawer && (
         <div
-          className="fixed inset-0 z-[100] flex items-start justify-center p-4 pt-20 md:pt-24"
+          className="fixed inset-0 z-[100] flex items-start justify-center p-2 sm:p-4 pt-4 sm:pt-20 md:pt-24"
           onClick={() =>
             setDrawer(null)
           }
         >
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
 
-          <div
-            className="relative bg-slate-800 border border-white/10 rounded-2xl shadow-2xl flex flex-col w-full overflow-hidden z-[110]"
-            style={{
-              maxWidth: '820px',
-              maxHeight: '85vh',
-            }}
-            onClick={(event) =>
-              event.stopPropagation()
-            }
-          >
+       <div
+  className="relative bg-slate-800 border border-white/10 rounded-2xl shadow-2xl flex flex-col w-full min-w-0 overflow-hidden z-[110]"
+  style={{
+    maxWidth: '820px',
+    maxHeight: '92vh',
+  }}
+  onClick={(event) => event.stopPropagation()}
+>
             {/* DRAWER HEADER */}
             <div
-              className="shrink-0 px-6 pt-7 pb-6 border-b"
+              className="shrink-0 px-4 sm:px-6 pt-5 sm:pt-7 pb-5 sm:pb-6 border-b"
               style={{
                 background:
                   'rgba(255,255,255,0.05)',
@@ -2047,7 +2212,7 @@ export default function AssignmentsPage() {
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
                   <h2
-                    className="text-3xl font-black break-words leading-tight"
+                    className="text-2xl font-black break-words leading-tight"
                     style={{
                       color:
                         '#F8FAFC',
@@ -2113,7 +2278,7 @@ export default function AssignmentsPage() {
 
             {/* DRAWER BODY */}
             <div className="flex-1 overflow-y-auto">
-              <div className="p-6 space-y-5">
+              <div className="p-4 sm:p-6 space-y-5">
 
                 {/* DESCRIPTION */}
                 <div>
@@ -2167,7 +2332,7 @@ export default function AssignmentsPage() {
                     Assignment Information
                   </p>
 
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                     {[
                       {
                         icon: '👤',
@@ -2850,7 +3015,7 @@ export default function AssignmentsPage() {
           ===================================================== */}
 
       {modal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-2 sm:p-4">
           <div
             className="absolute inset-0 bg-black/40 backdrop-blur-sm"
             onClick={() => {
@@ -2860,7 +3025,7 @@ export default function AssignmentsPage() {
             }}
           />
 
-          <div className="relative bg-slate-800 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md overflow-hidden z-[110]">
+          <div className="relative bg-slate-800 border border-white/10 rounded-2xl shadow-2xl w-full max-w-md max-h-[95vh] overflow-hidden flex flex-col z-[110]">
 
             {/* MODAL HEADER */}
             <div
@@ -2902,7 +3067,7 @@ export default function AssignmentsPage() {
               </button>
             </div>
 
-            <div className="p-5 space-y-4">
+            <div className="p-4 sm:p-5 space-y-4 overflow-y-auto flex-1 min-h-0">
 
               {/* ASSIGNMENT SELECTOR */}
               {!target ? (

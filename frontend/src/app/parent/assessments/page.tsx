@@ -191,7 +191,14 @@ const SkeletonAssessmentCard = () => (
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function AssessmentsPage() {
-  const { studentId, setStudentId, parentId, language, setLanguage } = useDashboard();
+  const {
+studentId,
+  setStudentId,
+  parentId,
+  parentName,
+  language,
+  setLanguage,
+} = useDashboard();
 
     const uiTextList = useMemo(
     () => Object.values(UI_TEXT),
@@ -276,29 +283,49 @@ export default function AssessmentsPage() {
   }, [modalData, summaryCache]);
 
   // ── Fetch ──────────────────────────────────────────────────────────────────
+useEffect(() => {
+  if (!studentId) {
+    setAssessments([]);
+    setIsLoading(false);
+    setModalData(null);
+    setSubjectFilter('All Subjects');
+    setTimelineFilter('All Time');
+    setCustomStart('');
+    setCustomEnd('');
+    return;
+  }
 
-  useEffect(() => {
-    if (!studentId) return;
-    const load = async () => {
-      setIsLoading(true);
-      setModalData(null);
-      setSubjectFilter('All Subjects');
-      setTimelineFilter('All Time');
-      setCustomStart('');
-      setCustomEnd('');
-      try {
-        console.log('[SSS] Assessments: fetching for student_id', studentId);
-        const data = await fetchAssessmentHistory(studentId);
-        setAssessments(data ?? []);
-      } catch (e) {
-        console.error('[SSS] Assessments: failed to load', e);
-        setAssessments([]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    load();
-  }, [studentId]);
+  const load = async () => {
+    setIsLoading(true);
+    setModalData(null);
+    setSubjectFilter('All Subjects');
+    setTimelineFilter('All Time');
+    setCustomStart('');
+    setCustomEnd('');
+
+    try {
+      console.log(
+        '[SSS] Assessments: fetching for student_id',
+        studentId
+      );
+
+      const data = await fetchAssessmentHistory(studentId);
+
+      setAssessments(data ?? []);
+    } catch (e) {
+      console.error(
+        '[SSS] Assessments: failed to load',
+        e
+      );
+
+      setAssessments([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  load();
+}, [studentId]);
 
   // ── Derived subjects list ──────────────────────────────────────────────────
 
@@ -398,13 +425,14 @@ export default function AssessmentsPage() {
   return (
     <div className="min-h-full flex flex-col font-sans">
       <TopBar
-        studentId={studentId}
-        setStudentId={setStudentId}
-        parentId={parentId}
-        language={language}
-        setLanguage={setLanguage}
-        isLoading={isLoading}
-      />
+  studentId={studentId}
+  setStudentId={setStudentId}
+  parentId={parentId}
+  parentName={parentName}
+  language={language}
+  setLanguage={setLanguage}
+  isLoading={isLoading}
+/>
 
       <div className="flex-1 p-4 md:p-6 lg:p-8">
         <div className="max-w-7xl mx-auto space-y-6">
@@ -419,13 +447,13 @@ export default function AssessmentsPage() {
 
           {/* ── FILTER BAR ────────────────────────────────────────────────── */}
           <div className="bg-white/5 rounded-xl border border-white/10 p-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-3">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap items-stretch sm:items-center gap-3">
               {/* Subject filter */}
               <select
                 value={subjectFilter}
                 onChange={e => setSubjectFilter(e.target.value)}
-                 className="bg-slate-800 border border-white/10 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none min-w-[160px]"
-              >
+    
+            className="w-full sm:w-auto bg-slate-800 border border-white/10 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none">
                 {subjects.map(s => (
                   <option key={s} value={s}>{s}</option>
                 ))}
@@ -435,7 +463,7 @@ export default function AssessmentsPage() {
               <select
                 value={timelineFilter}
                 onChange={e => { setTimelineFilter(e.target.value); setCustomStart(''); setCustomEnd(''); }}
-                 className="bg-slate-800 border border-white/10 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none min-w-[200px]"
+                className="w-full sm:w-auto bg-slate-800 border border-white/10 text-white text-sm font-semibold rounded-lg px-3 py-2 outline-none"
               >
                 {TIMELINE_OPTIONS.map(t => (
                   <option key={t} value={t}>{t}</option>
@@ -477,7 +505,7 @@ export default function AssessmentsPage() {
           {/* ── LOADING ───────────────────────────────────────────────────── */}
           {isLoading ? (
             <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                 {[0, 1, 2, 3].map(i => <SkeletonCard key={i} />)}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -637,7 +665,7 @@ export default function AssessmentsPage() {
                     return (
                       <div
                         key={a.result_id}
-                       className="bg-white/5 rounded-2xl border border-white/10 p-5 hover:bg-white/10 transition-all flex items-start gap-4"
+                       className="bg-white/5 rounded-2xl border border-white/10 p-4 sm:p-5 hover:bg-white/10 transition-all flex flex-col sm:flex-row items-start gap-4 min-w-0"
                       >
                         <CircularProgress pct={a.percentage} colorHex={c.hex} />
 
@@ -661,10 +689,9 @@ export default function AssessmentsPage() {
                           </h3>
 
                           {/* Chapter */}
-                           <p className="text-xs text-slate-400 font-semibold truncate mb-2">
-                            📖 {a.chapter_name}
-                          </p>
-
+                           <p className="text-xs text-slate-400 font-semibold break-words mb-2">
+  📖 {a.chapter_name}
+</p>
                           {/* Teacher + Date */}
                           <div className="flex flex-wrap items-center gap-2 mb-3">
                            <p className="text-xs font-bold text-slate-400">
@@ -720,7 +747,7 @@ export default function AssessmentsPage() {
           >
             <div className="absolute inset-0 bg-black/50 backdrop-blur-sm z-[100]" />
             <div
-               className="relative bg-slate-800 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg overflow-hidden z-[110] border border-white/10"
+               className="relative bg-slate-800 rounded-3xl shadow-2xl flex flex-col w-full max-w-lg max-h-[90vh] overflow-hidden z-[110] border border-white/10"
               onClick={e => e.stopPropagation()}
             >
               {/* Modal header controls */}
@@ -741,7 +768,7 @@ export default function AssessmentsPage() {
 
               {/* Title block */}
                <div className="px-6 py-4 border-b border-white/10">
-                <h2 className="text-2xl font-black text-white leading-tight">
+                <h2 className="text-xl sm:text-2xl font-black text-white leading-tight break-words">
                   {modalData.title}
                 </h2>
                <p className="text-sm font-bold text-slate-400 mt-1">
@@ -750,7 +777,7 @@ export default function AssessmentsPage() {
               </div>
 
               {/* Scrollable body */}
-              <div className="p-6 space-y-5 overflow-y-auto max-h-[65vh]">
+              <div className="p-4 sm:p-6 space-y-5 overflow-y-auto max-h-[65vh]">
 
                 {/* Result block */}
                 <div
@@ -782,11 +809,11 @@ export default function AssessmentsPage() {
                       { label: t.date,           value: modalData.assessment_date },
                       { label: t.maxMarks,      value: String(modalData.max_marks) },
                     ].map(({ label, value }) => (
-                     <div key={label} className="p-3 bg-white/5 rounded-xl border border-white/10">
+                     <div key={label} className="p-3 bg-white/5 rounded-xl border border-white/10 min-w-0 overflow-hidden">
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                           {label}
                         </p>
-                         <p className="text-sm font-bold text-white leading-snug">{value}</p>
+                         <p className="text-sm font-bold text-white leading-snug break-words whitespace-normal min-w-0">{value}</p>
                       </div>
                     ))}
                   </div>
@@ -795,7 +822,7 @@ export default function AssessmentsPage() {
                 {/* ── AI PERFORMANCE SUMMARY ─────────────────────────────── */}
                 <div className="rounded-2xl border border-orange-200 bg-orange-50 p-4">
 
-                  <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
                     <div className="flex items-center gap-2">
                       <span className="text-lg">✨</span>
                       <p className="text-sm font-black text-orange-700">
@@ -844,7 +871,7 @@ export default function AssessmentsPage() {
                               console.error(error);
                             }
                           }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold border border-orange-200 bg-white text-orange-700 hover:bg-orange-100 transition-colors"
+                          className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-bold border border-orange-200 bg-white text-orange-700 hover:bg-orange-100 transition-colors whitespace-nowrap"
                         >
                           🌐 Translate
                         </button>
@@ -883,7 +910,7 @@ export default function AssessmentsPage() {
                               console.error("Assessment summary voice generation failed:", error);
                             }
                           }}
-                          className="px-3 py-1.5 rounded-lg text-xs font-bold border border-orange-200 bg-white text-orange-700 hover:bg-orange-100 transition-colors"
+                          className="flex-1 sm:flex-none px-3 py-2 rounded-lg text-xs font-bold border border-orange-200 bg-white text-orange-700 hover:bg-orange-100 transition-colors whitespace-nowrap"
                         >
                           🔊 Listen
                         </button>
